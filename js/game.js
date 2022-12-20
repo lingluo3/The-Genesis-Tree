@@ -25,7 +25,13 @@ function getResetGain(layer, useType = null) {
 	} else if (type=="normal"){
 		if (tmp[layer].baseAmount.lt(tmp[layer].requires)) return decimalZero
 		let gain = tmp[layer].baseAmount.div(tmp[layer].requires).pow(tmp[layer].exponent).times(tmp[layer].gainMult).pow(tmp[layer].gainExp)
-		if (gain.gte(tmp[layer].softcap)) gain = gain.pow(tmp[layer].softcapPower).times(tmp[layer].softcap.pow(decimalOne.sub(tmp[layer].softcapPower)))
+		//vanilla softcap disabled, this tree uses a different type
+		//if (gain.gte(tmp[layer].softcap)) gain = gain.pow(tmp[layer].softcapPower).times(tmp[layer].softcap.pow(decimalOne.sub(tmp[layer].softcapPower)))
+		//S layer uses Gravity softcap (dilation)
+		if(layer == "s"){
+			if(gain.gte(tmp[layer].softcap)) gain = gain.root(gain.log(tmp[layer].softcap).pow(tmp[layer].softcapPower))
+		}
+		//P uses Anomaly softcap (log) (WIP, planned at end of row 4 layers)
 		gain = gain.times(tmp[layer].directMult)
 		return gain.floor().max(0);
 	} else if (type=="custom"){
@@ -59,7 +65,8 @@ function getNextAt(layer, canMax=false, useType = null) {
 		return cost;
 	} else if (type=="normal"){
 		let next = tmp[layer].resetGain.add(1).div(tmp[layer].directMult)
-		if (next.gte(tmp[layer].softcap)) next = next.div(tmp[layer].softcap.pow(decimalOne.sub(tmp[layer].softcapPower))).pow(decimalOne.div(tmp[layer].softcapPower))
+		//vanilla softcap disabled, this tree uses a different type
+		//if (next.gte(tmp[layer].softcap)) next = next.div(tmp[layer].softcap.pow(decimalOne.sub(tmp[layer].softcapPower))).pow(decimalOne.div(tmp[layer].softcapPower))
 		next = next.root(tmp[layer].gainExp).div(tmp[layer].gainMult).root(tmp[layer].exponent).times(tmp[layer].requires).max(tmp[layer].requires)
 		if (tmp[layer].roundUpCost) next = next.ceil()
 		return next;
@@ -214,14 +221,14 @@ function doReset(layer, force=false) {
 	for (layerResetting in layers) {
 		if (row >= layers[layerResetting].row && (!force || layerResetting != layer)) completeChallenge(layerResetting)
 	}
-
-	player.points = (row == 0 ? decimalZero : getStartPoints())
-
+	
 	for (let x = row; x >= 0; x--) rowReset(x, layer)
 	for (r in OTHER_LAYERS){
 		rowReset(r, layer)
 	}
-
+	
+	player.points = (row == 0 ? decimalZero : getStartPoints())
+	
 	player[layer].resetTime = 0
 
 	updateTemp()
@@ -371,7 +378,7 @@ function gameLoop(diff) {
 			let layer = OTHER_LAYERS[row][item]
 			if (tmp[layer].autoPrestige && tmp[layer].canReset) doReset(layer);
 			if (layers[layer].automate) layers[layer].automate();
-				player[layer].best = player[layer].best.max(player[layer].points)
+			player[layer].best = player[layer].best.max(player[layer].points)
 			if (tmp[layer].autoUpgrade) autobuyUpgrades(layer)
 		}
 	}
@@ -393,6 +400,27 @@ function hardReset(resetOptions) {
 
 var ticking = false
 
+var controlDown = false
+var shiftDown = false
+
+window.addEventListener('keydown', function(event) {
+	code = event.keyCode
+	if (player.toggleKeys) {
+		if (code == 16) shiftDown = !shiftDown;
+		if (code == 17) controlDown = !controlDown;
+	}
+	else {
+		if (code == 16) shiftDown = true;
+		if (code == 17) controlDown = true;
+	}
+}, false);
+
+window.addEventListener('keyup', function(event) {
+	if (player != undefined && player.toggleKeys) return 
+	if (event.keyCode == 16) shiftDown = false;
+	if (event.keyCode == 17) controlDown = false;
+}, false);
+
 var interval = setInterval(function() {
 	if (player===undefined||tmp===undefined) return;
 	if (ticking) return;
@@ -412,6 +440,7 @@ var interval = setInterval(function() {
 	}
 	if (player.devSpeed) diff *= player.devSpeed
 	player.time = now
+	player.shiftAlias = shiftDown
 	if (needCanvasUpdate){ resizeCanvas();
 		needCanvasUpdate = false;
 	}

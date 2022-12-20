@@ -194,6 +194,8 @@ function updateTabFormat(layer) {
 	}
 }
 
+//custom functions
+//these 2 are copied from plague tree
 function layerText(elem, layer, text) {
 	return "<" + elem + " style='color:" + tmp[layer].color + ";text-shadow:0px 0px 10px;'>" + text + "</" + elem + ">"
 }

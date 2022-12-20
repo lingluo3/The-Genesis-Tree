@@ -73,3 +73,16 @@ function achievementEffect(layer, id) {
 function gridEffect(layer, id) {
 	return (gridRun(layer, 'getEffect', player[layer].grid[id], id))
 }
+
+function layerEffect(layer) {
+	return (tmp[layer].effect)
+}
+
+//Simplified because this tree only has achievements in A layer
+function hasAch(id) {
+	return ((player['a'].achievements.includes(toNumber(id)) || player['a'].achievements.includes(id.toString())))
+}
+
+function achEff(id) {
+	return (tmp['a'].achievements[id].effect)
+}
